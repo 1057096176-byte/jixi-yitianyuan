@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>绩溪医田园 - 数据管理平台</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f7fa; color: #333; font-size: 14px; }
+
+/* 顶部导航 */
+.header {
+  height: 56px; background: linear-gradient(135deg, #4f6ef2 0%, #6c8af7 100%);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; color: #fff; position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-logo { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.header-title { font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+.header-right { display: flex; align-items: center; gap: 20px; }
+.header-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; transition: background .2s; }
+.header-icon:hover { background: rgba(255,255,255,0.15); }
+.header-user { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.header-avatar { width: 32px; height: 32px; background: rgba(255,255,255,0.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+/* 侧边栏 */
+.sidebar {
+  width: 200px; background: #fff; position: fixed; top: 56px; left: 0; bottom: 0;
+  border-right: 1px solid #e8ecf0; overflow-y: auto; z-index: 90;
+}
+.menu-group { padding: 8px 0; }
+.menu-group-title {
+  display: flex; align-items: center; gap: 8px; padding: 12px 20px; font-size: 14px;
+  font-weight: 600; color: #333; cursor: pointer; user-select: none; transition: background .15s;
+}
+.menu-group-title:hover { background: #f5f7fa; }
+.menu-group-title .icon { font-size: 18px; opacity: .7; }
+.menu-group-title .arrow { margin-left: auto; font-size: 10px; transition: transform .2s; color: #999; }
+.menu-group-title.expanded .arrow { transform: rotate(180deg); }
+.menu-item {
+  padding: 10px 20px 10px 48px; color: #666; cursor: pointer; transition: all .15s;
+  position: relative; font-size: 13px;
+}
+.menu-item:hover { color: #4f6ef2; background: #f0f3ff; }
+.menu-item.active { color: #4f6ef2; background: #eef1ff; font-weight: 500; }
+.menu-item.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: #4f6ef2; border-radius: 0 2px 2px 0;
+}
+.menu-sub { display: none; }
+.menu-sub.show { display: block; }
+.menu-sub .menu-item { padding-left: 56px; font-size: 13px; }
+.menu-sub .menu-item::before { content: '• '; color: #999; }
+.menu-sub .menu-item.active::before { content: ''; }
+
+/* 主内容区 */
+.main { margin-left: 200px; margin-top: 56px; padding: 24px; min-height: calc(100vh - 56px); }
+
+/* 筛选栏 */
+.filter-bar {
+  background: #fff; border-radius: 8px; padding: 20px 24px; margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+.filter-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.filter-item { display: flex; align-items: center; gap: 8px; }
+.filter-label { color: #666; white-space: nowrap; font-size: 13px; }
+.filter-input {
+  height: 36px; border: 1px solid #dcdfe6; border-radius: 6px; padding: 0 12px;
+  font-size: 13px; color: #333; outline: none; transition: border-color .2s;
+}
+.filter-input:focus { border-color: #4f6ef2; }
+.filter-select {
+  height: 36px; border: 1px solid #dcdfe6; border-radius: 6px; padding: 0 12px;
+  font-size: 13px; color: #333; outline: none; background: #fff; min-width: 140px;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px;
+  cursor: pointer;
+}
+.filter-select:focus { border-color: #4f6ef2; }
+.filter-date { width: 260px; }
+.filter-search { width: 220px; }
+.filter-actions { margin-left: auto; }
+.btn-query {
+  height: 36px; padding: 0 28px; background: #4f6ef2; color: #fff; border: none;
+  border-radius: 6px; font-size: 14px; cursor: pointer; transition: background .2s;
+}
+.btn-query:hover { background: #3d5bd9; }
+
+/* 表格 */
+.table-card {
+  background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.04); overflow: hidden;
+}
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  background: #fafbfc; padding: 14px 16px; text-align: left; font-weight: 600;
+  color: #333; font-size: 13px; border-bottom: 1px solid #ebeef5;
+}
+.data-table td {
+  padding: 14px 16px; border-bottom: 1px solid #f0f2f5; font-size: 13px; color: #555;
+}
+.data-table tr:hover td { background: #f8f9ff; }
+.data-table tr:last-child td { border-bottom: none; }
+
+.btn-action {
+  padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;
+  border: none; transition: all .15s; margin-right: 6px;
+}
+.btn-detail { background: transparent; color: #4f6ef2; }
+.btn-detail:hover { background: #eef1ff; }
+.btn-memo { background: transparent; color: #67c23a; }
+.btn-memo:hover { background: #f0f9eb; }
+
+/* 分页 */
+.pagination {
+  display: flex; align-items: center; justify-content: flex-end; padding: 16px 20px; gap: 4px;
+}
+.page-btn {
+  min-width: 32px; height: 32px; border: 1px solid #dcdfe6; border-radius: 4px;
+  background: #fff; color: #666; font-size: 13px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; transition: all .15s; padding: 0 8px;
+}
+.page-btn:hover { color: #4f6ef2; border-color: #4f6ef2; }
+.page-btn.active { background: #4f6ef2; color: #fff; border-color: #4f6ef2; }
+.page-btn.disabled { color: #ccc; cursor: not-allowed; }
+.page-dots { padding: 0 4px; color: #999; font-size: 12px; }
+.page-size {
+  height: 32px; border: 1px solid #dcdfe6; border-radius: 4px; padding: 0 8px;
+  font-size: 13px; color: #666; margin-left: 8px; outline: none;
+}
+
+/* 侧边抽屉 */
+.drawer-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.35);
+  z-index: 200; opacity: 0; visibility: hidden; transition: all .3s;
+}
+.drawer-overlay.show { opacity: 1; visibility: visible; }
+.drawer {
+  position: fixed; top: 0; right: -520px; width: 520px; height: 100%; background: #fff;
+  z-index: 201; transition: right .3s ease; display: flex; flex-direction: column;
+  box-shadow: -4px 0 20px rgba(0,0,0,.1);
+}
+.drawer.show { right: 0; }
+.drawer-header {
+  padding: 20px 24px; border-bottom: 1px solid #e8ecf0; display: flex;
+  align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.drawer-title { font-size: 16px; font-weight: 600; color: #333; }
+.drawer-patient-info { font-size: 12px; color: #999; margin-top: 4px; }
+.drawer-close {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 50%; transition: background .15s; font-size: 20px; color: #999;
+}
+.drawer-close:hover { background: #f5f7fa; color: #666; }
+.drawer-actions {
+  padding: 12px 24px; border-bottom: 1px solid #e8ecf0; display: flex;
+  align-items: center; justify-content: space-between; flex-shrink: 0;
+}
+.btn-copy-all {
+  height: 32px; padding: 0 16px; background: #4f6ef2; color: #fff; border: none;
+  border-radius: 6px; font-size: 13px; cursor: pointer; transition: background .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-copy-all:hover { background: #3d5bd9; }
+.record-count { font-size: 13px; color: #999; }
+
+/* 时间线 */
+.drawer-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.timeline { position: relative; }
+.timeline::before {
+  content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px;
+  background: #e8ecf0;
+}
+.timeline-item { position: relative; padding-left: 44px; margin-bottom: 24px; }
+.timeline-item:last-child { margin-bottom: 0; }
+.timeline-dot {
+  position: absolute; left: 8px; top: 2px; width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 9px;
+  z-index: 1;
+}
+.timeline-dot.text { background: #e8f0fe; color: #4f6ef2; }
+.timeline-dot.audio { background: #fef3e8; color: #e6a23c; }
+.timeline-dot.image { background: #e8fef0; color: #67c23a; }
+.timeline-dot.video { background: #fee8f0; color: #f56c6c; }
+
+.timeline-time { font-size: 12px; color: #999; margin-bottom: 8px; }
+.timeline-card {
+  background: #f8f9fc; border-radius: 8px; padding: 14px 16px; position: relative;
+  border: 1px solid #eef0f5;
+}
+.timeline-card:hover { border-color: #d5daef; }
+.timeline-type-tag {
+  display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  margin-bottom: 8px; font-weight: 500;
+}
+.timeline-type-tag.text { background: #e8f0fe; color: #4f6ef2; }
+.timeline-type-tag.audio { background: #fef3e8; color: #e6a23c; }
+.timeline-type-tag.image { background: #e8fef0; color: #67c23a; }
+.timeline-type-tag.video { background: #fee8f0; color: #f56c6c; }
+
+.timeline-content { font-size: 13px; color: #555; line-height: 1.7; }
+.timeline-content p { margin-bottom: 6px; }
+.timeline-content p:last-child { margin-bottom: 0; }
+
+.btn-cite {
+  position: absolute; top: 12px; right: 12px; padding: 4px 10px; font-size: 11px;
+  background: #fff; border: 1px solid #dcdfe6; border-radius: 4px; color: #666;
+  cursor: pointer; transition: all .15s; opacity: 0;
+}
+.timeline-card:hover .btn-cite { opacity: 1; }
+.btn-cite:hover { border-color: #4f6ef2; color: #4f6ef2; background: #f0f3ff; }
+.btn-cite.copied { background: #67c23a; color: #fff; border-color: #67c23a; }
+
+/* 音频播放条 */
+.audio-player {
+  display: flex; align-items: center; gap: 10px; padding: 8px 0;
+}
+.audio-play-btn {
+  width: 36px; height: 36px; border-radius: 50%; background: #4f6ef2; color: #fff;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border: none; font-size: 14px; flex-shrink: 0; transition: background .15s;
+}
+.audio-play-btn:hover { background: #3d5bd9; }
+.audio-wave {
+  flex: 1; height: 32px; background: #e8ecf0; border-radius: 4px; position: relative;
+  overflow: hidden;
+}
+.audio-wave-fill {
+  height: 100%; background: linear-gradient(90deg, #4f6ef2 0%, #a5b4fc 100%);
+  border-radius: 4px; width: 0%; transition: width .1s;
+}
+.audio-duration { font-size: 12px; color: #999; white-space: nowrap; }
+
+/* 图片 */
+.timeline-image {
+  border-radius: 6px; max-width: 100%; max-height: 200px; object-fit: cover;
+  cursor: pointer; transition: transform .15s;
+}
+.timeline-image:hover { transform: scale(1.02); }
+.image-placeholder {
+  width: 200px; height: 150px; background: linear-gradient(135deg, #e8ecf0, #f5f7fa);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  color: #999; font-size: 32px;
+}
+
+/* 视频 */
+.video-placeholder {
+  width: 100%; max-width: 320px; height: 180px;
+  background: linear-gradient(135deg, #1a1a2e, #16213e); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; position: relative;
+  cursor: pointer;
+}
+.video-play-icon {
+  width: 48px; height: 48px; background: rgba(255,255,255,.2); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px;
+  backdrop-filter: blur(4px); transition: background .15s;
+}
+.video-placeholder:hover .video-play-icon { background: rgba(255,255,255,.35); }
+.video-duration {
+  position: absolute; bottom: 8px; right: 10px; font-size: 11px; color: #fff;
+  background: rgba(0,0,0,.5); padding: 2px 6px; border-radius: 3px;
+}
+
+/* Toast */
+.toast {
+  position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+  background: #333; color: #fff; padding: 10px 24px; border-radius: 6px; font-size: 14px;
+  z-index: 300; opacity: 0; transition: all .3s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: #67c23a; }
+
+/* 详情弹窗 */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.35);
+  z-index: 200; opacity: 0; visibility: hidden; transition: all .3s;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-overlay.show { opacity: 1; visibility: visible; }
+.modal {
+  background: #fff; border-radius: 12px; width: 600px; max-height: 80vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.15); transform: scale(.95); transition: transform .3s;
+}
+.modal-overlay.show .modal { transform: scale(1); }
+.modal-header {
+  padding: 20px 24px; border-bottom: 1px solid #e8ecf0; display: flex;
+  align-items: center; justify-content: space-between;
+}
+.modal-title { font-size: 16px; font-weight: 600; }
+.modal-close {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border-radius: 50%; font-size: 20px; color: #999; transition: background .15s;
+}
+.modal-close:hover { background: #f5f7fa; }
+.modal-body { padding: 24px; }
+.detail-row { display: flex; margin-bottom: 16px; }
+.detail-label { width: 90px; color: #999; font-size: 13px; flex-shrink: 0; }
+.detail-value { color: #333; font-size: 13px; flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">+</div>
+    <div class="header-title">绩溪医田园</div>
+  </div>
+  <div class="header-right">
+    <div class="header-icon">?</div>
+    <div class="header-icon">🔔</div>
+    <div class="header-user">
+      <div class="header-avatar">管</div>
+      <span>管理员</span>
+    </div>
+  </div>
+</div>
+
+<!-- 侧边栏 -->
+<div class="sidebar">
+  <div class="menu-group">
+    <div class="menu-group-title expanded" onclick="toggleMenu(this)">
+      <span class="icon">📋</span>
+      <span>医田园数据</span>
+      <span class="arrow">▲</span>
+    </div>
+    <div class="menu-sub show">
+      <div class="menu-item active">患者列表</div>
+    </div>
+  </div>
+  <div class="menu-group">
+    <div class="menu-group-title" onclick="toggleMenu(this)">
+      <span class="icon">📊</span>
+      <span>数据统计</span>
+      <span class="arrow">▲</span>
+    </div>
+    <div class="menu-sub">
+      <div class="menu-item">采集概览</div>
+      <div class="menu-item">趋势分析</div>
+    </div>
+  </div>
+  <div class="menu-group">
+    <div class="menu-group-title" onclick="toggleMenu(this)">
+      <span class="icon">⚙️</span>
+      <span>系统管理</span>
+      <span class="arrow">▲</span>
+    </div>
+    <div class="menu-sub">
+      <div class="menu-item">机构管理</div>
+      <div class="menu-item">用户管理</div>
+    </div>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<div class="main">
+  <!-- 筛选栏 -->
+  <div class="filter-bar">
+    <div class="filter-row">
+      <div class="filter-item">
+        <span class="filter-label">采集日期：</span>
+        <input type="date" class="filter-input filter-date" value="2025-01-01" style="width:140px">
+        <span style="color:#999; margin: 0 4px;">→</span>
+        <input type="date" class="filter-input filter-date" value="2025-05-13" style="width:140px">
+      </div>
+      <div class="filter-item">
+        <span class="filter-label">机构：</span>
+        <select class="filter-select">
+          <option>全部</option>
+          <option>绩溪县人民医院</option>
+          <option>绩溪县中医院</option>
+          <option>华阳镇卫生院</option>
+          <option>长安镇卫生院</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <input type="text" class="filter-input filter-search" placeholder="患者姓名/身份证查询">
+      </div>
+      <div class="filter-actions">
+        <button class="btn-query" onclick="showToast('查询完成')">查询</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 表格 -->
+  <div class="table-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>患者姓名</th>
+          <th>身份证号</th>
+          <th>手机号</th>
+          <th>就诊时间</th>
+          <th>机构</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- 语音备忘录抽屉 -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title">语音备忘录</div>
+      <div class="drawer-patient-info" id="drawerPatientInfo"></div>
+    </div>
+    <div class="drawer-close" onclick="closeDrawer()">×</div>
+  </div>
+  <div class="drawer-actions">
+    <span class="record-count" id="recordCount"></span>
+    <button class="btn-copy-all" onclick="copyAll()">📋 一键全部引用</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">患者详情</div>
+      <div class="modal-close" onclick="closeModal()">×</div>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// Mock 数据
+const patients = [
+  { id: 1, name: '张秀兰', gender: '女', age: 68, idCard: '342427195612083421', phone: '13856312456', time: '2025-05-12 09:30:15', org: '绩溪县人民医院', diagnosis: '高血压2级', doctor: '王建华' },
+  { id: 2, name: '李大明', gender: '男', age: 72, idCard: '342427195308152318', phone: '15905631234', time: '2025-05-12 10:15:22', org: '绩溪县人民医院', diagnosis: '2型糖尿病', doctor: '张丽萍' },
+  { id: 3, name: '王桂芳', gender: '女', age: 55, idCard: '342427196905244567', phone: '18756321098', time: '2025-05-11 14:20:08', org: '绩溪县中医院', diagnosis: '腰椎间盘突出', doctor: '陈志强' },
+  { id: 4, name: '陈国强', gender: '男', age: 63, idCard: '342427196201179876', phone: '13365631567', time: '2025-05-11 15:45:33', org: '华阳镇卫生院', diagnosis: '冠心病', doctor: '刘芳' },
+  { id: 5, name: '刘美华', gender: '女', age: 45, idCard: '342427197908123456', phone: '15256318765', time: '2025-05-10 08:50:41', org: '长安镇卫生院', diagnosis: '慢性胃炎', doctor: '赵伟' },
+  { id: 6, name: '赵德福', gender: '男', age: 78, idCard: '342427194706052345', phone: '13856319087', time: '2025-05-10 09:22:17', org: '绩溪县人民医院', diagnosis: '慢阻肺', doctor: '王建华' },
+  { id: 7, name: '孙玉梅', gender: '女', age: 52, idCard: '342427197302186789', phone: '18056324321', time: '2025-05-09 11:10:55', org: '绩溪县中医院', diagnosis: '类风湿关节炎', doctor: '陈志强' },
+  { id: 8, name: '周志远', gender: '男', age: 60, idCard: '342427196505293456', phone: '15605637654', time: '2025-05-09 14:35:29', org: '绩溪县人民医院', diagnosis: '脑梗塞后遗症', doctor: '张丽萍' },
+  { id: 9, name: '吴秋霞', gender: '女', age: 41, idCard: '342427198403127890', phone: '13756322345', time: '2025-05-08 10:05:12', org: '华阳镇卫生院', diagnosis: '甲状腺结节', doctor: '刘芳' },
+  { id: 10, name: '郑文彬', gender: '男', age: 57, idCard: '342427196801054321', phone: '18956316789', time: '2025-05-08 15:18:46', org: '长安镇卫生院', diagnosis: '痛风', doctor: '赵伟' },
+  { id: 11, name: '黄丽娟', gender: '女', age: 66, idCard: '342427195909235678', phone: '15105638901', time: '2025-05-07 09:40:33', org: '绩溪县人民医院', diagnosis: '骨质疏松', doctor: '王建华' },
+  { id: 12, name: '马建国', gender: '男', age: 74, idCard: '342427195103186543', phone: '13656311234', time: '2025-05-07 11:25:18', org: '绩溪县中医院', diagnosis: '前列腺增生', doctor: '陈志强' },
+  { id: 13, name: '杨翠花', gender: '女', age: 49, idCard: '342427197607094567', phone: '18256327890', time: '2025-05-06 08:15:07', org: '华阳镇卫生院', diagnosis: '偏头痛', doctor: '刘芳' },
+  { id: 14, name: '胡明远', gender: '男', age: 83, idCard: '342427194211023456', phone: '15856315678', time: '2025-05-06 10:50:29', org: '绩溪县人民医院', diagnosis: '帕金森病', doctor: '张丽萍' },
+  { id: 15, name: '林小燕', gender: '女', age: 38, idCard: '342427198712168901', phone: '13956324567', time: '2025-05-05 14:30:55', org: '长安镇卫生院', diagnosis: '过敏性鼻炎', doctor: '赵伟' },
+];
+
+// 语音备忘录 Mock 数据
+const memoData = {
+  1: [
+    { type: 'text', time: '2025-05-12 09:35', content: '患者主诉头晕、头痛反复发作3年余，加重伴视物模糊1周。既往高血压病史5年，服用硝苯地平缓释片，血压控制不稳定。' },
+    { type: 'audio', time: '2025-05-12 09:42', content: '门诊问诊录音', duration: '03:25' },
+    { type: 'text', time: '2025-05-12 09:50', content: '查体：BP 168/95mmHg，心率82次/分，心律齐，各瓣膜听诊区未闻及病理性杂音。双下肢无水肿。' },
+    { type: 'image', time: '2025-05-12 10:05', content: '心电图检查报告', desc: '窦性心律，左室高电压' },
+    { type: 'text', time: '2025-05-12 10:15', content: '处理意见：调整降压方案为氨氯地平5mg qd + 缬沙坦80mg qd，低盐低脂饮食，1周后复查血压。' },
+    { type: 'audio', time: '2025-05-12 10:20', content: '医嘱交代录音', duration: '01:48' },
+  ],
+  2: [
+    { type: 'text', time: '2025-05-12 10:20', content: '患者因"口干、多饮、多尿5年，血糖控制不佳2月"就诊。目前口服二甲双胍1000mg bid，空腹血糖波动在8-12mmol/L。' },
+    { type: 'audio', time: '2025-05-12 10:30', content: '病史采集录音', duration: '05:12' },
+    { type: 'image', time: '2025-05-12 10:45', content: '糖化血红蛋白报告', desc: 'HbA1c 8.7%' },
+    { type: 'text', time: '2025-05-12 11:00', content: '足部检查：双足皮肤干燥，足背动脉搏动正常，10g尼龙丝检查感觉正常，踝肱指数1.05。' },
+    { type: 'video', time: '2025-05-12 11:10', content: '足部检查操作视频', duration: '02:35' },
+  ],
+  3: [
+    { type: 'text', time: '2025-05-11 14:25', content: '患者腰痛伴左下肢放射痛6月余，久坐及弯腰后加重，平卧休息可缓解。MRI示L4/5椎间盘突出。' },
+    { type: 'audio', time: '2025-05-11 14:35', content: '中医四诊记录', duration: '04:18' },
+    { type: 'text', time: '2025-05-11 14:50', content: '中医辨证：肾虚血瘀证。治法：补肾活血、通络止痛。方用独活寄生汤加减。' },
+    { type: 'image', time: '2025-05-11 15:00', content: '腰椎MRI影像', desc: 'L4/5椎间盘向后突出，硬膜囊受压' },
+    { type: 'text', time: '2025-05-11 15:10', content: '针灸处方：取穴肾俞、委中、承山、环跳、阳陵泉，平补平泻法，留针30分钟，每日1次。' },
+    { type: 'video', time: '2025-05-11 15:20', content: '针灸治疗操作视频', duration: '05:10' },
+    { type: 'audio', time: '2025-05-11 15:35', content: '康复指导录音', duration: '02:05' },
+  ],
+  4: [
+    { type: 'text', time: '2025-05-11 15:50', content: '患者胸闷、气短3年余，活动后加重，休息可缓解。冠脉造影示前降支狭窄70%，已行药物保守治疗。' },
+    { type: 'audio', time: '2025-05-11 16:00', content: '随访记录', duration: '03:40' },
+    { type: 'text', time: '2025-05-11 16:15', content: '目前用药：阿司匹林100mg qd, 阿托伐他汀20mg qn, 美托洛尔47.5mg qd, 单硝酸异山梨酯20mg bid。' },
+  ],
+  5: [
+    { type: 'text', time: '2025-05-10 08:55', content: '患者反复上腹部隐痛、嗳气2年，饭后加重。胃镜示慢性非萎缩性胃炎。幽门螺杆菌阳性。' },
+    { type: 'audio', time: '2025-05-10 09:05', content: '饮食指导', duration: '02:30' },
+    { type: 'image', time: '2025-05-10 09:15', content: '胃镜检查图片', desc: '胃窦黏膜充血、水肿' },
+    { type: 'text', time: '2025-05-10 09:25', content: '予四联根除方案：奥美拉唑20mg bid + 阿莫西林1g bid + 克拉霉素0.5g bid + 铋剂 14天。' },
+  ],
+  6: [
+    { type: 'text', time: '2025-05-10 09:30', content: '患者反复咳嗽、咳痰20余年，活动后气促加重5年。肺功能示重度阻塞性通气功能障碍，FEV1 42%预计值。' },
+    { type: 'audio', time: '2025-05-10 09:45', content: '肺部听诊记录', duration: '01:55' },
+    { type: 'text', time: '2025-05-10 10:00', content: '吸入用药指导：布地奈德福莫特罗吸入剂 每日2次，沙丁胺醇气雾剂 按需使用。注意吸入技术指导。' },
+    { type: 'video', time: '2025-05-10 10:10', content: '吸入器使用教学视频', duration: '03:20' },
+    { type: 'image', time: '2025-05-10 10:20', content: '肺功能报告', desc: 'FEV1/FVC 52%，重度阻塞' },
+  ],
+  7: [
+    { type: 'text', time: '2025-05-09 11:15', content: '患者双手关节肿痛晨僵8年，加重伴双腕活动受限3月。RF 阳性，抗CCP抗体阳性，ESR 65mm/h。' },
+    { type: 'audio', time: '2025-05-09 11:25', content: '关节功能评估', duration: '04:50' },
+    { type: 'text', time: '2025-05-09 11:40', content: '中医证型：湿热痹阻证。方用四妙散合白虎桂枝汤加减，配合中药外洗方。' },
+  ],
+  8: [
+    { type: 'text', time: '2025-05-09 14:40', content: '患者2年前突发左侧肢体偏瘫，经治疗后遗留左上肢活动不利，肌力III级。目前服用阿司匹林、阿托伐他汀。' },
+    { type: 'video', time: '2025-05-09 14:55', content: '康复训练视频', duration: '08:15' },
+    { type: 'audio', time: '2025-05-09 15:10', content: '康复计划讲解', duration: '03:30' },
+    { type: 'text', time: '2025-05-09 15:25', content: '康复评估：Barthel指数65分，改良Rankin量表3级。建议继续肢体功能训练，每周3次OT+PT。' },
+  ],
+  9: [
+    { type: 'text', time: '2025-05-08 10:10', content: '患者体检发现甲状腺结节1年，无颈部不适。超声示右叶低回声结节12×8mm，TI-RADS 3类。' },
+    { type: 'image', time: '2025-05-08 10:25', content: '甲状腺超声图', desc: '右叶低回声结节，边界清' },
+    { type: 'text', time: '2025-05-08 10:35', content: '甲功正常。建议6个月后复查甲状腺超声，如结节增大或形态改变，考虑细针穿刺活检。' },
+  ],
+  10: [
+    { type: 'text', time: '2025-05-08 15:25', content: '患者右足第一跖趾关节红肿热痛反复发作2年，血尿酸 520μmol/L。已排除继发性痛风。' },
+    { type: 'audio', time: '2025-05-08 15:35', content: '饮食禁忌讲解', duration: '03:15' },
+    { type: 'text', time: '2025-05-08 15:50', content: '急性期予依托考昔60mg qd抗炎止痛，间歇期非布司他20mg qd降尿酸，目标＜360μmol/L。嘱忌酒、低嘌呤饮食。' },
+  ],
+  11: [
+    { type: 'text', time: '2025-05-07 09:45', content: '患者腰背痛3年，身高较前缩短3cm。骨密度T值 -3.2，诊断骨质疏松症。' },
+    { type: 'image', time: '2025-05-07 10:00', content: '骨密度报告', desc: '腰椎T值-3.2，股骨颈T值-2.8' },
+    { type: 'audio', time: '2025-05-07 10:10', content: '用药指导录音', duration: '02:45' },
+    { type: 'text', time: '2025-05-07 10:25', content: '治疗方案：阿仑膦酸钠70mg 每周1次（晨起空腹，温水送服，直立30分钟），碳酸钙D3 600mg qd。' },
+  ],
+  12: [
+    { type: 'text', time: '2025-05-07 11:30', content: '患者排尿困难、尿频、夜尿增多5年，加重2月。IPSS评分22分。超声示前列腺60×45×50mm。' },
+    { type: 'audio', time: '2025-05-07 11:45', content: '中医问诊记录', duration: '05:30' },
+    { type: 'text', time: '2025-05-07 12:00', content: '中医辨证：肾虚湿热证。方用济生肾气丸合八正散加减，配合中药灌肠治疗。西药予坦索罗辛0.2mg qn。' },
+  ],
+  13: [
+    { type: 'text', time: '2025-05-06 08:20', content: '患者反复单侧搏动性头痛5年，发作时伴恶心、畏光，每月发作3-4次，持续4-12小时。' },
+    { type: 'audio', time: '2025-05-06 08:30', content: '头痛日记讲解', duration: '02:10' },
+    { type: 'text', time: '2025-05-06 08:45', content: '诊断：无先兆偏头痛。急性期予布洛芬400mg顿服，预防性治疗予普萘洛尔20mg bid，避免诱因。' },
+  ],
+  14: [
+    { type: 'text', time: '2025-05-06 10:55', content: '患者静止性震颤、行动迟缓5年，加重伴平衡障碍6月。H-Y分期III期，UPDRS运动评分38分。' },
+    { type: 'video', time: '2025-05-06 11:10', content: '步态评估视频', duration: '04:20' },
+    { type: 'audio', time: '2025-05-06 11:25', content: '用药调整方案', duration: '03:55' },
+    { type: 'text', time: '2025-05-06 11:40', content: '调整方案：美多芭250mg tid改为qid，加用恩他卡朋200mg随美多芭服用。嘱避免体位性低血压。' },
+    { type: 'image', time: '2025-05-06 11:50', content: '颅脑MRI', desc: '脑萎缩，双侧基底节区腔隙性缺血灶' },
+  ],
+  15: [
+    { type: 'text', time: '2025-05-05 14:35', content: '患者反复鼻塞、流清涕、喷嚏3年，春秋季加重。过敏原检测：尘螨、花粉强阳性。' },
+    { type: 'audio', time: '2025-05-05 14:45', content: '鼻腔冲洗指导', duration: '01:50' },
+    { type: 'text', time: '2025-05-05 15:00', content: '治疗方案：糠酸莫米松鼻喷剂 每日1次，氯雷他定10mg qd，生理盐水鼻腔冲洗 每日2次。' },
+  ],
+};
+
+// 脱敏函数
+function maskName(name) {
+  if (name.length <= 1) return name;
+  return name[0] + '*'.repeat(name.length - 1);
+}
+function maskIdCard(id) {
+  if (!id || id.length < 10) return id;
+  return id.substring(0, 4) + '**********' + id.substring(id.length - 4);
+}
+function maskPhone(phone) {
+  if (!phone || phone.length < 7) return phone;
+  return phone.substring(0, 3) + '****' + phone.substring(phone.length - 4);
+}
+
+// 分页
+let currentPage = 1;
+const pageSize = 10;
+
+function renderTable() {
+  const start = (currentPage - 1) * pageSize;
+  const end = Math.min(start + pageSize, patients.length);
+  const pageData = patients.slice(start, end);
+
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = pageData.map(p => `
+    <tr>
+      <td>${maskName(p.name)}</td>
+      <td>${maskIdCard(p.idCard)}</td>
+      <td>${maskPhone(p.phone)}</td>
+      <td>${p.time}</td>
+      <td>${p.org}</td>
+      <td>
+        <button class="btn-action btn-detail" onclick="showDetail(${p.id})">详情</button>
+        <button class="btn-action btn-memo" onclick="openMemo(${p.id})">语音备忘录</button>
+      </td>
+    </tr>
+  `).join('');
+
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = patients.length;
+  const totalPages = Math.ceil(total / pageSize);
+  const pg = document.getElementById('pagination');
+
+  let html = `<button class="page-btn ${currentPage === 1 ? 'disabled' : ''}" onclick="goPage(${currentPage - 1})">&lt;</button>`;
+  for (let i = 1; i <= totalPages; i++) {
+    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn ${currentPage === totalPages ? 'disabled' : ''}" onclick="goPage(${currentPage + 1})">&gt;</button>`;
+  html += `<select class="page-size" onchange="changePageSize(this.value)"><option>10条/页</option></select>`;
+  pg.innerHTML = html;
+}
+
+function goPage(page) {
+  const totalPages = Math.ceil(patients.length / pageSize);
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  renderTable();
+}
+
+// 详情弹窗
+function showDetail(id) {
+  const p = patients.find(x => x.id === id);
+  if (!p) return;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = `
+    <div class="detail-row"><div class="detail-label">姓名</div><div class="detail-value">${maskName(p.name)}</div></div>
+    <div class="detail-row"><div class="detail-label">性别</div><div class="detail-value">${p.gender}</div></div>
+    <div class="detail-row"><div class="detail-label">年龄</div><div class="detail-value">${p.age}岁</div></div>
+    <div class="detail-row"><div class="detail-label">身份证号</div><div class="detail-value">${maskIdCard(p.idCard)}</div></div>
+    <div class="detail-row"><div class="detail-label">手机号</div><div class="detail-value">${maskPhone(p.phone)}</div></div>
+    <div class="detail-row"><div class="detail-label">就诊时间</div><div class="detail-value">${p.time}</div></div>
+    <div class="detail-row"><div class="detail-label">机构</div><div class="detail-value">${p.org}</div></div>
+    <div class="detail-row"><div class="detail-label">诊断</div><div class="detail-value">${p.diagnosis}</div></div>
+    <div class="detail-row"><div class="detail-label">主治医生</div><div class="detail-value">${p.doctor}</div></div>
+  `;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+// 语音备忘录抽屉
+let currentMemoPatientId = null;
+
+function openMemo(id) {
+  currentMemoPatientId = id;
+  const p = patients.find(x => x.id === id);
+  const records = memoData[id] || [];
+
+  document.getElementById('drawerPatientInfo').textContent = `${maskName(p.name)} | ${p.org} | ${p.time.split(' ')[0]}`;
+  document.getElementById('recordCount').textContent = `共 ${records.length} 条记录`;
+
+  const body = document.getElementById('drawerBody');
+  body.innerHTML = '<div class="timeline">' + records.map((r, i) => renderTimelineItem(r, i)).join('') + '</div>';
+  if (records.length === 0) {
+    body.innerHTML = '<div style="text-align:center;padding:60px 0;color:#999;">暂无备忘录记录</div>';
+  }
+
+  document.getElementById('drawerOverlay').classList.add('show');
+  document.getElementById('drawer').classList.add('show');
+}
+
+function renderTimelineItem(record, index) {
+  let contentHtml = '';
+  let citeText = '';
+
+  switch (record.type) {
+    case 'text':
+      contentHtml = `<div class="timeline-content"><p>${record.content}</p></div>`;
+      citeText = record.content;
+      break;
+    case 'audio':
+      contentHtml = `
+        <div class="timeline-content"><p>${record.content}</p></div>
+        <div class="audio-player">
+          <button class="audio-play-btn" onclick="toggleAudio(this, ${index})">▶</button>
+          <div class="audio-wave"><div class="audio-wave-fill" id="wave-${index}"></div></div>
+          <span class="audio-duration">${record.duration}</span>
+        </div>`;
+      citeText = `[语音] ${record.content}（${record.duration}）`;
+      break;
+    case 'image':
+      contentHtml = `
+        <div class="timeline-content"><p>${record.content}</p></div>
+        <div class="image-placeholder">🖼</div>
+        ${record.desc ? `<div style="font-size:12px;color:#999;margin-top:6px;">${record.desc}</div>` : ''}`;
+      citeText = `[图片] ${record.content}${record.desc ? '（' + record.desc + '）' : ''}`;
+      break;
+    case 'video':
+      contentHtml = `
+        <div class="timeline-content"><p>${record.content}</p></div>
+        <div class="video-placeholder">
+          <div class="video-play-icon">▶</div>
+          <span class="video-duration">${record.duration}</span>
+        </div>`;
+      citeText = `[视频] ${record.content}（${record.duration}）`;
+      break;
+  }
+
+  const typeLabels = { text: '文字', audio: '语音', image: '图片', video: '视频' };
+
+  return `
+    <div class="timeline-item">
+      <div class="timeline-dot ${record.type}"></div>
+      <div class="timeline-time">${record.time}</div>
+      <div class="timeline-card">
+        <span class="timeline-type-tag ${record.type}">${typeLabels[record.type]}</span>
+        <button class="btn-cite" onclick="citeItem(this, \`${citeText.replace(/`/g, "'")}\`, '${record.time}')">引用</button>
+        ${contentHtml}
+      </div>
+    </div>`;
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('show');
+  document.getElementById('drawer').classList.remove('show');
+}
+
+// 引用复制
+function citeItem(btn, text, time) {
+  const copyText = `[${time}] ${text}`;
+  navigator.clipboard.writeText(copyText).then(() => {
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    showToast('已复制到剪贴板', 'success');
+    setTimeout(() => { btn.textContent = '引用'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+function copyAll() {
+  const records = memoData[currentMemoPatientId] || [];
+  const p = patients.find(x => x.id === currentMemoPatientId);
+  const typeLabels = { text: '文字', audio: '语音', image: '图片', video: '视频' };
+
+  let text = `患者：${maskName(p.name)} | ${p.org}\n${'─'.repeat(30)}\n\n`;
+  records.forEach(r => {
+    let line = `[${r.time}] `;
+    switch (r.type) {
+      case 'text': line += r.content; break;
+      case 'audio': line += `[语音] ${r.content}（${r.duration}）`; break;
+      case 'image': line += `[图片] ${r.content}${r.desc ? '（' + r.desc + '）' : ''}`; break;
+      case 'video': line += `[视频] ${r.content}（${r.duration}）`; break;
+    }
+    text += line + '\n\n';
+  });
+
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    showToast(`已复制全部 ${records.length} 条记录`, 'success');
+  });
+}
+
+// 音频播放模拟
+const audioTimers = {};
+function toggleAudio(btn, index) {
+  const wave = document.getElementById(`wave-${index}`);
+  if (audioTimers[index]) {
+    clearInterval(audioTimers[index]);
+    delete audioTimers[index];
+    btn.textContent = '▶';
+    wave.style.width = '0%';
+    return;
+  }
+  btn.textContent = '⏸';
+  let progress = 0;
+  audioTimers[index] = setInterval(() => {
+    progress += 2;
+    wave.style.width = progress + '%';
+    if (progress >= 100) {
+      clearInterval(audioTimers[index]);
+      delete audioTimers[index];
+      btn.textContent = '▶';
+      setTimeout(() => { wave.style.width = '0%'; }, 500);
+    }
+  }, 100);
+}
+
+// Toast
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => { toast.className = 'toast'; }, 2000);
+}
+
+// 菜单展开收起
+function toggleMenu(el) {
+  el.classList.toggle('expanded');
+  const sub = el.nextElementSibling;
+  sub.classList.toggle('show');
+}
+
+// 初始化
+renderTable();
+</script>
+</body>
+</html>
